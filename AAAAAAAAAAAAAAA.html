@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Clientes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0074d9;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        form input,
+        form button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        form button {
+            background-color: #ff851b;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        form button:hover {
+            background-color: #ff6600;
+        }
+
+        .search-bar {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .search-bar button {
+            margin-left: 10px;
+            padding: 10px;
+            background-color: #0074d9;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-bar button:hover {
+            background-color: #005bb5;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #0074d9;
+            color: white;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #0074d9;
+        }
+
+        .modal-content button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ff851b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-content button:hover {
+            background-color: #ff6600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cadastro de Clientes</h1>
+        <form id="client-form">
+            <input type="text" id="codigo" placeholder="Código" required>
+            <input type="text" id="nome" placeholder="Nome" required>
+            <input type="text" id="rota" placeholder="Rota" required>
+            <input type="tel" id="telefone" placeholder="Telefone" required pattern="\d+">
+            <input type="text" id="notas" placeholder="Notas">
+            <button type="submit">Adicionar Cliente</button>
+        </form>
+
+        <div class="search-bar">
+            <input type="text" id="search" placeholder="Pesquisar clientes...">
+            <button id="export-excel">Exportar para Excel</button>
+        </div>
+
+        <div class="table-container">
+            <table id="client-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Rota</th>
+                        <th>Telefone</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal" id="notes-modal">
+        <div class="modal-content">
+            <h2>Notas do Cliente</h2>
+            <p id="modal-notes"></p>
+            <button id="close-modal">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        const clientForm = document.getElementById('client-form');
+        const clientTable = document.getElementById('client-table').querySelector('tbody');
+        const searchInput = document.getElementById('search');
+        const modal = document.getElementById('notes-modal');
+        const modalNotes = document.getElementById('modal-notes');
+        const closeModal = document.getElementById('close-modal');
+
+        // Carregar dados do LocalStorage
+        const loadClients = () => JSON.parse(localStorage.getItem('clients')) || [];
+
+        // Salvar dados no LocalStorage
+        const saveClients = (clients) => localStorage.setItem('clients', JSON.stringify(clients));
+
+        // Renderizar a tabela
+        const renderTable = (clients) => {
+            clientTable.innerHTML = '';
+            clients.forEach((client, index) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${client.codigo}</td>
+                    <td onclick="showNotes('${client.notas || ''}')" style="cursor: pointer; color: #0074d9;">${client.nome}</td>
+                    <td>${client.rota}</td>
+                    <td><a href="https://wa.me/${client.telefone}" target="_blank">Abrir WhatsApp</a></td>
+                    <td>
+                        <button onclick="deleteClient(${index})">Excluir</button>
+                    </td>
+                `;
+
+                clientTable.appendChild(row);
+            });
+        };
+
+        // Mostrar notas no modal
+        const showNotes = (notes) => {
+            modalNotes.textContent = notes || 'Nenhuma nota disponível.';
+            modal.style.display = 'flex';
+        };
+
+        // Fechar modal
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Adicionar cliente
+        clientForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const clients = loadClients();
+
+            const newClient = {
+                codigo: document.getElementById('codigo').value,
+                nome: document.getElementById('nome').value,
+                rota: document.getElementById('rota').value,
+                telefone: document.getElementById('telefone').value,
+                notas: document.getElementById('notas').value
+            };
+
+            if (clients.some(client => client.codigo === newClient.codigo)) {
+                alert('O código já está cadastrado!');
+                return;
+            }
+
+            clients.push(newClient);
+            saveClients(clients);
+            renderTable(clients);
+            clientForm.reset();
+        });
+
+        // Excluir cliente
+        const deleteClient = (index) => {
+            if (confirm('Tem certeza que deseja excluir este cliente?')) {
+                const clients = loadClients();
+                clients.splice(index, 1);
+                saveClients(clients);
+                renderTable(clients);
+            }
+        };
+
+        // Filtrar clientes
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            const clients = loadClients();
+            const filteredClients = clients.filter(client =>
+                client.nome.toLowerCase().includes(query) ||
+                client.codigo.toLowerCase().includes(query) ||
+                client.rota.toLowerCase().includes(query)
+            );
+
+            renderTable(filteredClients);
+        });
+
+        // Exportar para Excel
+        document.getElementById('export-excel').addEventListener('click', () => {
+            const clients = loadClients();
+
+            if (clients.length === 0) {
+                alert('Nenhum cliente cadastrado para exportar!');
+                return;
+            }
+
+            const sheetData = clients.map(client => ({
+                Código: client.codigo,
+                Nome: client.nome,
+                Rota: client.rota,
+                Telefone: client.telefone,
+                'Link WhatsApp': `https://wa.me/${client.telefone}`
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(sheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Cadastro de Clientes');
+
+            XLSX.writeFile(workbook, 'Cadastro_Clientes.xlsx');
+        });
+
+        // Inicializar
+        renderTable(loadClients());
+    </script>
+</body>
+</html>
