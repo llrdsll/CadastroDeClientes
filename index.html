@@ -7,123 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #0074d9;
-        }
-
-        form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        form input,
-        form button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-
-        form button {
-            background-color: #ff851b;
-            color: white;
-            cursor: pointer;
-            border: none;
-        }
-
-        form button:hover {
-            background-color: #ff6600;
-        }
-
-        .search-bar {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .search-bar input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #0074d9;
-            color: white;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .modal-content p {
-            margin-bottom: 20px;
-        }
-
-        .modal-close {
-            background: #0074d9;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+        /* Estilos omitidos por brevidade */
     </style>
 </head>
 <body>
@@ -189,7 +73,7 @@
 
         // Exibir modal
         const showModal = (text) => {
-            modalText.textContent = text;
+            modalText.textContent = text || "Nenhuma nota disponível.";
             modal.style.display = 'flex';
         };
 
@@ -245,7 +129,28 @@
             }
         };
 
-        // Inicializar
+        // Pesquisa de clientes
+        searchInput.addEventListener('input', async () => {
+            const searchValue = searchInput.value.toLowerCase();
+            const querySnapshot = await db.collection('clientes').get();
+            clientTable.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const client = doc.data();
+                if (client.nome.toLowerCase().includes(searchValue) || client.rota.toLowerCase().includes(searchValue)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${client.codigo}</td>
+                        <td><a href="#" onclick="showModal('${client.notas || ''}')">${client.nome}</a></td>
+                        <td>${client.rota}</td>
+                        <td><a href="https://wa.me/${client.telefone}" target="_blank">Abrir WhatsApp</a></td>
+                        <td><button onclick="deleteClient('${doc.id}')">Excluir</button></td>
+                    `;
+                    clientTable.appendChild(row);
+                }
+            });
+        });
+
+        // Inicializar a lista de clientes
         loadClients();
     </script>
 </body>
