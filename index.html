@@ -4,73 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de Clientes</title>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            background-color: #f7f7f7;
             margin: 0;
             padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 900px;
-            margin: 20px auto;
+            width: 90%;
+            max-width: 800px;
             background: white;
-            border-radius: 8px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            color: #007bff;
+            color: #0074d9;
         }
 
         form {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
+            margin-bottom: 20px;
         }
 
-        form input, form button {
+        form input,
+        form button {
             padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 5px;
-            border: 1px solid #ccc;
-            flex: 1 1 30%;
+            font-size: 16px;
         }
 
         form button {
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-
-        form button:hover {
-            background-color: #0056b3;
-        }
-
-        .search-bar {
-            display: flex;
-            margin-bottom: 20px;
-            gap: 10px;
-        }
-
-        .search-bar input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        .search-bar button {
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #28a745;
+            background-color: #ff851b;
             color: white;
             cursor: pointer;
             border: none;
+        }
+
+        form button:hover {
+            background-color: #ff6600;
+        }
+
+        .table-container {
+            overflow-x: auto;
         }
 
         table {
@@ -79,17 +66,14 @@
         }
 
         th, td {
+            text-align: left;
             padding: 10px;
-            border: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
         }
 
         th {
-            background-color: #007bff;
+            background-color: #0074d9;
             color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f4f4f9;
         }
     </style>
 </head>
@@ -105,113 +89,83 @@
             <button type="submit">Adicionar Cliente</button>
         </form>
 
-        <div class="search-bar">
-            <input type="text" id="search" placeholder="Pesquisar clientes...">
+        <div class="table-container">
+            <table id="client-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Rota</th>
+                        <th>Telefone</th>
+                        <th>Notas</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nome</th>
-                    <th>Rota</th>
-                    <th>Telefone</th>
-                    <th>Notas</th>
-                </tr>
-            </thead>
-            <tbody id="client-table"></tbody>
-        </table>
     </div>
 
     <script>
-        // Configuração Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZXZYDF6EmEShY3grU_gp0c78qQxa3U_A",
-            authDomain: "cadastro-clientes-ebd83.firebaseapp.com",
-            projectId: "cadastro-clientes-ebd83",
-            storageBucket: "cadastro-clientes-ebd83.firebasestorage.app",
-            messagingSenderId: "1002950274129",
-            appId: "1:1002950274129:web:030b9f40e437cbab845c70"
-        };
+        const API_URL = "https://script.google.com/macros/s/AKfycbwIOqONn1zAOyOfO9VcfK0aNIsEV50mRgDZC8yCw7c4uiyyKKdopY28iYvX6wsc7kTu/exec";
 
-        // Inicializar Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const clientForm = document.getElementById("client-form");
+        const clientTable = document.getElementById("client-table").querySelector("tbody");
 
-        const clientForm = document.getElementById('client-form');
-        const clientTable = document.getElementById('client-table');
-        const searchInput = document.getElementById('search');
-
-        // Adicionar cliente ao banco de dados
-        clientForm.addEventListener('submit', async (e) => {
+        // Adicionar cliente
+        clientForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const client = {
-                codigo: document.getElementById('codigo').value,
-                nome: document.getElementById('nome').value,
-                rota: document.getElementById('rota').value,
-                telefone: document.getElementById('telefone').value,
-                notas: document.getElementById('notas').value,
-            };
+            const codigo = document.getElementById("codigo").value;
+            const nome = document.getElementById("nome").value;
+            const rota = document.getElementById("rota").value;
+            const telefone = document.getElementById("telefone").value;
+            const notas = document.getElementById("notas").value;
 
-            try {
-                await db.collection('clientes').add(client);
-                alert('Cliente adicionado com sucesso!');
-                clientForm.reset();
-                loadClients();
-            } catch (error) {
-                console.error('Erro ao adicionar cliente:', error);
-            }
+            const response = await fetch(${API_URL}?action=add&codigo=${codigo}&nome=${nome}&rota=${rota}&telefone=${telefone}&notas=${notas});
+            const message = await response.text();
+
+            alert(message);
+            loadClients();
+            clientForm.reset();
         });
 
-        // Carregar clientes do banco de dados
+        // Carregar clientes
         const loadClients = async () => {
-            clientTable.innerHTML = '';
-            try {
-                const querySnapshot = await db.collection('clientes').get();
-                querySnapshot.forEach((doc) => {
-                    const client = doc.data();
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${client.codigo}</td>
-                        <td>${client.nome}</td>
-                        <td>${client.rota}</td>
-                        <td>${client.telefone}</td>
-                        <td>${client.notas}</td>
-                    `;
-                    clientTable.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Erro ao carregar clientes:', error);
+            const response = await fetch(${API_URL}?action=read);
+            const clients = await response.json();
+
+            clientTable.innerHTML = "";
+            clients.forEach(client => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${client.Código}</td>
+                    <td>${client.Nome}</td>
+                    <td>${client.Rota}</td>
+                    <td>${client.Telefone}</td>
+                    <td>${client.Notas || ""}</td>
+                    <td>
+                        <button onclick="deleteClient('${client.Código}')">Excluir</button>
+                    </td>
+                `;
+
+                clientTable.appendChild(row);
+            });
+        };
+
+        // Excluir cliente
+        const deleteClient = async (codigo) => {
+            if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                const response = await fetch(${API_URL}?action=delete&codigo=${codigo});
+                const message = await response.text();
+
+                alert(message);
+                loadClients();
             }
         };
 
-        // Pesquisar clientes
-        searchInput.addEventListener('input', async () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            clientTable.innerHTML = '';
-            try {
-                const querySnapshot = await db.collection('clientes').get();
-                querySnapshot.forEach((doc) => {
-                    const client = doc.data();
-                    if (client.nome.toLowerCase().includes(searchTerm)) {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${client.codigo}</td>
-                            <td>${client.nome}</td>
-                            <td>${client.rota}</td>
-                            <td>${client.telefone}</td>
-                            <td>${client.notas}</td>
-                        `;
-                        clientTable.appendChild(row);
-                    }
-                });
-            } catch (error) {
-                console.error('Erro ao pesquisar clientes:', error);
-            }
-        });
-
-        // Inicializar a lista de clientes
+        // Inicializar tabela
         loadClients();
     </script>
 </body>
