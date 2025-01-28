@@ -7,7 +7,90 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
     <style>
-        /* Estilos omitidos por brevidade */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        form input, form button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            flex: 1 1 30%;
+        }
+
+        form button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #0056b3;
+        }
+
+        .search-bar {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .search-bar button {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f4f4f9;
+        }
     </style>
 </head>
 <body>
@@ -17,40 +100,31 @@
             <input type="text" id="codigo" placeholder="Código" required>
             <input type="text" id="nome" placeholder="Nome" required>
             <input type="text" id="rota" placeholder="Rota" required>
-            <input type="tel" id="telefone" placeholder="Telefone" required pattern="\d+">
+            <input type="tel" id="telefone" placeholder="Telefone" required>
             <input type="text" id="notas" placeholder="Notas">
             <button type="submit">Adicionar Cliente</button>
         </form>
 
         <div class="search-bar">
             <input type="text" id="search" placeholder="Pesquisar clientes...">
-            <button id="export-excel">Exportar para Excel</button>
         </div>
 
-        <div class="table-container">
-            <table id="client-table">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Rota</th>
-                        <th>Telefone</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <p id="modal-text"></p>
-            <button class="modal-close">Fechar</button>
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Rota</th>
+                    <th>Telefone</th>
+                    <th>Notas</th>
+                </tr>
+            </thead>
+            <tbody id="client-table"></tbody>
+        </table>
     </div>
 
     <script>
+        // Configuração Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAZXZYDF6EmEShY3grU_gp0c78qQxa3U_A",
             authDomain: "cadastro-clientes-ebd83.firebaseapp.com",
@@ -65,36 +139,23 @@
         const db = firebase.firestore();
 
         const clientForm = document.getElementById('client-form');
-        const clientTable = document.getElementById('client-table').querySelector('tbody');
+        const clientTable = document.getElementById('client-table');
         const searchInput = document.getElementById('search');
-        const modal = document.getElementById('modal');
-        const modalText = document.getElementById('modal-text');
-        const modalClose = document.querySelector('.modal-close');
 
-        // Exibir modal
-        const showModal = (text) => {
-            modalText.textContent = text || "Nenhuma nota disponível.";
-            modal.style.display = 'flex';
-        };
-
-        modalClose.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        // Salvar cliente
+        // Adicionar cliente ao banco de dados
         clientForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const newClient = {
+            const client = {
                 codigo: document.getElementById('codigo').value,
                 nome: document.getElementById('nome').value,
                 rota: document.getElementById('rota').value,
                 telefone: document.getElementById('telefone').value,
-                notas: document.getElementById('notas').value
+                notas: document.getElementById('notas').value,
             };
 
             try {
-                await db.collection('clientes').add(newClient);
+                await db.collection('clientes').add(client);
                 alert('Cliente adicionado com sucesso!');
                 clientForm.reset();
                 loadClients();
@@ -103,51 +164,51 @@
             }
         });
 
-        // Carregar clientes
+        // Carregar clientes do banco de dados
         const loadClients = async () => {
-            const querySnapshot = await db.collection('clientes').get();
             clientTable.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const client = doc.data();
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${client.codigo}</td>
-                    <td><a href="#" onclick="showModal('${client.notas || ''}')">${client.nome}</a></td>
-                    <td>${client.rota}</td>
-                    <td><a href="https://wa.me/${client.telefone}" target="_blank">Abrir WhatsApp</a></td>
-                    <td><button onclick="deleteClient('${doc.id}')">Excluir</button></td>
-                `;
-                clientTable.appendChild(row);
-            });
-        };
-
-        // Excluir cliente
-        const deleteClient = async (id) => {
-            if (confirm('Tem certeza que deseja excluir este cliente?')) {
-                await db.collection('clientes').doc(id).delete();
-                loadClients();
-            }
-        };
-
-        // Pesquisa de clientes
-        searchInput.addEventListener('input', async () => {
-            const searchValue = searchInput.value.toLowerCase();
-            const querySnapshot = await db.collection('clientes').get();
-            clientTable.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const client = doc.data();
-                if (client.nome.toLowerCase().includes(searchValue) || client.rota.toLowerCase().includes(searchValue)) {
+            try {
+                const querySnapshot = await db.collection('clientes').get();
+                querySnapshot.forEach((doc) => {
+                    const client = doc.data();
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${client.codigo}</td>
-                        <td><a href="#" onclick="showModal('${client.notas || ''}')">${client.nome}</a></td>
+                        <td>${client.nome}</td>
                         <td>${client.rota}</td>
-                        <td><a href="https://wa.me/${client.telefone}" target="_blank">Abrir WhatsApp</a></td>
-                        <td><button onclick="deleteClient('${doc.id}')">Excluir</button></td>
+                        <td>${client.telefone}</td>
+                        <td>${client.notas}</td>
                     `;
                     clientTable.appendChild(row);
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+            }
+        };
+
+        // Pesquisar clientes
+        searchInput.addEventListener('input', async () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            clientTable.innerHTML = '';
+            try {
+                const querySnapshot = await db.collection('clientes').get();
+                querySnapshot.forEach((doc) => {
+                    const client = doc.data();
+                    if (client.nome.toLowerCase().includes(searchTerm)) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${client.codigo}</td>
+                            <td>${client.nome}</td>
+                            <td>${client.rota}</td>
+                            <td>${client.telefone}</td>
+                            <td>${client.notas}</td>
+                        `;
+                        clientTable.appendChild(row);
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao pesquisar clientes:', error);
+            }
         });
 
         // Inicializar a lista de clientes
