@@ -1,250 +1,95 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro de Clientes</title>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+const SUPABASE_URL = "SUA_SUPABASE_URL_AQUI";
+const SUPABASE_KEY = "SUA_SUPABASE_CHAVE_ANON_AQUI";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
+document.getElementById("client-form").addEventListener("submit", async function(event) {
+    event.preventDefault();
 
-        h1 {
-            text-align: center;
-            color: #0074d9;
-        }
+    let codigo = document.getElementById("codigo").value;
+    let telefone1 = document.getElementById("telefone1").value;
+    let telefone2 = document.getElementById("telefone2").value;
+    let razaoSocial = document.getElementById("razaoSocial").value;
+    let nomeFantasia = document.getElementById("nomeFantasia").value;
+    let notas = document.getElementById("notas").value;
 
-        form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+    let cliente = { codigo, telefone1, telefone2, razaoSocial, nomeFantasia, notas };
 
-        form input,
-        form button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
+    // Salvar no LocalStorage
+    let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+    clientes.push(cliente);
+    localStorage.setItem("clientes", JSON.stringify(clientes));
 
-        form button {
-            background-color: #ff851b;
-            color: white;
-            cursor: pointer;
-            border: none;
-        }
+    // Enviar para o Supabase
+    let { error } = await supabase.from("clientes").insert([cliente]);
+    if (error) {
+        console.error("Erro ao salvar no Supabase:", error);
+    }
 
-        form button:hover {
-            background-color: #ff6600;
-        }
+    carregarClientes();
+    this.reset();
+});
 
-        .search-bar {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
+// Carregar clientes ao abrir a página
+function carregarClientes() {
+    let lista = document.getElementById("client-list");
+    lista.innerHTML = "";
 
-        .search-bar input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
+    let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+    clientes.forEach((cliente, index) => {
+        let row = lista.insertRow();
 
-        .table-container {
-            overflow-x: auto;
-        }
+        row.innerHTML = `
+            <td>${cliente.codigo}</td>
+            <td class="cliente-nome" data-notas="${cliente.notas}">${cliente.nomeFantasia}</td>
+            <td>${cliente.telefone1}</td>
+            <td>${cliente.telefone2}</td>
+            <td><button onclick="removerCliente(${index})">🗑</button></td>
+        `;
+    });
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #0074d9;
-            color: white;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .modal-content p {
-            margin-bottom: 20px;
-        }
-
-        .modal-close {
-            background: #0074d9;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Cadastro de Clientes</h1>
-        <form id="client-form">
-            <input type="text" id="codigo" placeholder="Código" required>
-            <input type="text" id="nome" placeholder="Nome" required>
-            <input type="text" id="rota" placeholder="Rota" required>
-            <input type="tel" id="telefone" placeholder="Telefone" required pattern="\d+">
-            <input type="text" id="notas" placeholder="Notas">
-            <button type="submit">Adicionar Cliente</button>
-        </form>
-
-        <div class="search-bar">
-            <input type="text" id="search" placeholder="Pesquisar clientes...">
-            <button id="export-excel">Exportar para Excel</button>
-        </div>
-
-        <div class="table-container">
-            <table id="client-table">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Rota</th>
-                        <th>Telefone</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <p id="modal-text"></p>
-            <button class="modal-close">Fechar</button>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZXZYDF6EmEShY3grU_gp0c78qQxa3U_A",
-            authDomain: "cadastro-clientes-ebd83.firebaseapp.com",
-            projectId: "cadastro-clientes-ebd83",
-            storageBucket: "cadastro-clientes-ebd83.firebasestorage.app",
-            messagingSenderId: "1002950274129",
-            appId: "1:1002950274129:web:030b9f40e437cbab845c70"
-        };
-
-        // Inicializar Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        const clientForm = document.getElementById('client-form');
-        const clientTable = document.getElementById('client-table').querySelector('tbody');
-        const searchInput = document.getElementById('search');
-        const modal = document.getElementById('modal');
-        const modalText = document.getElementById('modal-text');
-        const modalClose = document.querySelector('.modal-close');
-
-        // Exibir modal
-        const showModal = (text) => {
-            modalText.textContent = text;
-            modal.style.display = 'flex';
-        };
-
-        modalClose.addEventListener('click', () => {
-            modal.style.display = 'none';
+    // Adicionar evento de clique no nome
+    document.querySelectorAll(".cliente-nome").forEach(nome => {
+        nome.addEventListener("click", function() {
+            abrirPopup(this.dataset.notas);
         });
+    });
+}
 
-        // Salvar cliente
-        clientForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+// Remover cliente
+function removerCliente(index) {
+    let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+    clientes.splice(index, 1);
+    localStorage.setItem("clientes", JSON.stringify(clientes));
+    carregarClientes();
+}
 
-            const newClient = {
-                codigo: document.getElementById('codigo').value,
-                nome: document.getElementById('nome').value,
-                rota: document.getElementById('rota').value,
-                telefone: document.getElementById('telefone').value,
-                notas: document.getElementById('notas').value
-            };
+// Barra de pesquisa
+document.getElementById("search").addEventListener("input", function() {
+    let termo = this.value.toLowerCase();
+    let clientes = document.querySelectorAll("#client-list tr");
 
-            try {
-                await db.collection('clientes').add(newClient);
-                alert('Cliente adicionado com sucesso!');
-                clientForm.reset();
-                loadClients();
-            } catch (error) {
-                console.error('Erro ao adicionar cliente:', error);
-            }
-        });
+    clientes.forEach(cliente => {
+        let nome = cliente.querySelector("td:nth-child(2)").textContent.toLowerCase();
+        cliente.style.display = nome.includes(termo) ? "" : "none";
+    });
+});
 
-        // Carregar clientes
-        const loadClients = async () => {
-            const querySnapshot = await db.collection('clientes').get();
-            clientTable.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const client = doc.data();
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${client.codigo}</td>
-                    <td><a href="#" onclick="showModal('${client.notas || ''}')">${client.nome}</a></td>
-                    <td>${client.rota}</td>
-                    <td><a href="https://wa.me/${client.telefone}" target="_blank">Abrir WhatsApp</a></td>
-                    <td><button onclick="deleteClient('${doc.id}')">Excluir</button></td>
-                `;
-                clientTable.appendChild(row);
-            });
-        };
+// Popup de notas
+let popup = document.getElementById("popup");
+let popupText = document.getElementById("popup-text");
+let close = document.querySelector(".close");
 
-        // Excluir cliente
-        const deleteClient = async (id) => {
-            if (confirm('Tem certeza que deseja excluir este cliente?')) {
-                await db.collection('clientes').doc(id).delete();
-                loadClients();
-            }
-        };
+function abrirPopup(notas) {
+    popupText.textContent = notas;
+    popup.style.display = "block";
+}
 
+close.addEventListener("click", function() {
+    popup.style.display = "none";
+});
+
+// Carregar clientes ao iniciar
+carregarClientes();
         // Inicializar
         loadClients();
     </script>
