@@ -1,178 +1,46 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de Clientes</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-        h1 { text-align: center; color: #0074d9; }
-        form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        form input, form button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        form button { background-color: #ff851b; color: white; cursor: pointer; border: none; }
-        form button:hover { background-color: #ff6600; }
-        .search-bar { margin-bottom: 10px; display: flex; align-items: center; }
-        .search-bar input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-        th { background-color: #0074d9; color: white; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Cadastro de Clientes</h1>
-        <form id="client-form">
-            <input type="text" id="codigo" placeholder="Código" required>
-            <input type="text" id="nome" placeholder="Nome" required>
-            <input type="text" id="rota" placeholder="Rota" required>
-            <input type="tel" id="telefone" placeholder="Telefone" required pattern="\d+">
-            <input type="text" id="notas" placeholder="Notas">
-            <button type="submit">Adicionar Cliente</button>
-        </form>
+    <h1>Cadastro de Clientes</h1>
+    
+    <form id="client-form">
+        <input type="text" id="codigo" placeholder="Código" required>
+        <input type="text" id="telefone1" placeholder="Telefone 1" required>
+        <input type="text" id="telefone2" placeholder="Telefone 2">
+        <input type="text" id="razaoSocial" placeholder="Razão Social" required>
+        <input type="text" id="nomeFantasia" placeholder="Nome Fantasia">
+        <textarea id="notas" placeholder="Notas"></textarea>
+        <button type="submit">Cadastrar</button>
+    </form>
 
-        <div class="search-bar">
-            <input type="text" id="search" placeholder="Pesquisar clientes...">
+    <input type="text" id="search" placeholder="Buscar clientes...">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nome Fantasia</th>
+                <th>Telefone 1</th>
+                <th>Telefone 2</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="client-list"></tbody>
+    </table>
+
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <span class="close">&times;</span>
+            <p id="popup-text"></p>
         </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nome</th>
-                    <th>Rota</th>
-                    <th>Telefone</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="client-table"></tbody>
-        </table>
     </div>
 
-    <script>
-        // Configuração do Supabase
-        const supabaseUrl = 'https://eaecvqgchkegvdklkysd.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhZWN2cWdjaGtlZ3Zka2xreXNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgwOTg2ODAsImV4cCI6MjA1MzY3NDY4MH0.YxUtedrsG9WYuBZEd7Fqk3D7jQ6H2JRycqMS0kpe8ng';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        const clientForm = document.getElementById('client-form');
-        const clientTable = document.getElementById('client-table');
-        const searchInput = document.getElementById('search');
-
-        // Função para carregar clientes
-        const carregarClientes = async () => {
-            const { data: clientes, error } = await supabase.from('clientes').select('*');
-            if (error) {
-                console.error('Erro ao carregar clientes:', error);
-                alert('Erro ao carregar clientes: ' + error.message);
-                return;
-            }
-            renderTable(clientes);
-        };
-
-        // Renderizar tabela de clientes
-        const renderTable = (clientes) => {
-            clientTable.innerHTML = '';
-            clientes.forEach(cliente => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${cliente.codigo}</td>
-                    <td>${cliente.nome}</td>
-                    <td>${cliente.rota}</td>
-                    <td>${cliente.telefone}</td>
-                    <td>
-                        <button onclick="deleteClient(${cliente.id})">Excluir</button>
-                    </td>
-                `;
-                clientTable.appendChild(row);
-            });
-        };
-
-        // Adicionar cliente
-        clientForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newClient = {
-                codigo: document.getElementById('codigo').value,
-                nome: document.getElementById('nome').value,
-                rota: document.getElementById('rota').value,
-                telefone: document.getElementById('telefone').value,
-                notas: document.getElementById('notas').value,
-            };
-            const { error } = await supabase.from('clientes').insert([newClient]);
-            if (error) {
-                console.error('Erro ao adicionar cliente:', error);
-                alert('Erro ao adicionar cliente: ' + error.message);
-                return;
-            }
-            alert('Cliente adicionado com sucesso!');
-            carregarClientes();
-            clientForm.reset();
-        });
-
-        // Excluir cliente
-        const deleteClient = async (id) => {
-            const { error } = await supabase.from('clientes').delete().eq('id', id);
-            if (error) {
-                console.error('Erro ao excluir cliente:', error);
-                alert('Erro ao excluir cliente: ' + error.message);
-                return;
-            }
-            alert('Cliente excluído com sucesso!');
-            carregarClientes();
-        };
-
-        // Pesquisar cliente
-        searchInput.addEventListener('input', async () => {
-            const query = searchInput.value.toLowerCase();
-            const { data: clientes, error } = await supabase
-                .from('clientes')
-                .select('*')
-                .ilike('nome', %${query}%);
-            if (error) {
-                console.error('Erro ao pesquisar clientes:', error);
-                alert('Erro ao pesquisar clientes: ' + error.message);
-                return;
-            }
-            renderTable(clientes);
-        });
-
-        // Carregar clientes ao iniciar
-        carregarClientes();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
