@@ -1,6 +1,6 @@
-const SUPABASE_URL = "SUA_SUPABASE_URL_AQUI";
-const SUPABASE_KEY = "SUA_SUPABASE_CHAVE_ANON_AQUI";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = "https://yrnsiccgssbozfxhznaz.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybnNpY2Nnc3Nib3pmeGh6bmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg2MDczMDYsImV4cCI6MjA1NDE4MzMwNn0.4SpWqGD5c_qjCrshZj3sZj5zoxfpWBCIa9J3HyZu1wI";
+const supabase = supabase.createClient(https://yrnsiccgssbozfxhznaz.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybnNpY2Nnc3Nib3pmeGh6bmF6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODYwNzMwNiwiZXhwIjoyMDU0MTgzMzA2fQ.ez5r6XZpwDNV_gnTIeSlpJ5qfkb221M1Qv8haZrgPjk);
 
 document.getElementById("client-form").addEventListener("submit", async function(event) {
     event.preventDefault();
